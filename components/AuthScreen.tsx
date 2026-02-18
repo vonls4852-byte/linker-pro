@@ -34,21 +34,6 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
   const [success, setSuccess] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  // Debounce функция для валидации
-  const debounce = (fn: Function, delay: number) => {
-    let timeoutId: NodeJS.Timeout;
-    return (...args: any[]) => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => fn(...args), delay);
-    };
-  };
-
-  // Создаем debounced версию валидации
-  const debouncedValidate = debounce((field: string, value: string) => {
-    const errorMsg = validateField(field, value);
-    setFieldErrors(prev => ({ ...prev, [field]: errorMsg }));
-  }, 500);
-
   // Валидация полей
   const validateField = (field: string, value: string): string => {
     switch (field) {
@@ -67,18 +52,15 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
     }
   };
 
-  // Обработчик изменений полей (УПРОЩЕННЫЙ - БЕЗ ВАЛИДАЦИИ)
+  // Обработчик изменений полей (ТОЛЬКО ОБНОВЛЕНИЕ)
   const handleInputChange = (field: keyof UserData, value: string) => {
-    // Только обновляем значение, без валидации
     setFormData(prev => ({ ...prev, [field]: value }));
-
-    // Сбрасываем только общую ошибку, но не ошибки полей
     setError('');
   };
 
   // Валидация при потере фокуса
   const handleBlur = (field: keyof UserData) => {
-    const value = formData[field as string] || '';
+    const value = formData[field] || '';
     const errorMsg = validateField(field, value);
     setFieldErrors(prev => ({ ...prev, [field]: errorMsg }));
   };
@@ -154,15 +136,11 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
       console.log('📥 Ответ сервера:', data);
 
       if (response.ok) {
-        // Успешная регистрация
         const user = data.user || data;
         localStorage.setItem('current_user', JSON.stringify(user));
         setSuccess('Регистрация успешна! Перенаправляем...');
-
-        // Небольшая задержка для показа сообщения
         setTimeout(() => onAuthSuccess(user), 1000);
       } else {
-        // Ошибка от сервера
         const errorMessage =
           data.error ||
           data.message ||
@@ -192,7 +170,6 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
         password: formData.password
       };
 
-      // Добавляем идентификатор в зависимости от метода входа
       if (loginMethod === 'phone') {
         payload.phone = formData.phone.replace(/\D/g, '');
       } else if (loginMethod === 'nickname') {
@@ -220,11 +197,9 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
       console.log('📥 Ответ сервера:', data);
 
       if (response.ok) {
-        // Успешный вход
         const user = data.user || data;
         localStorage.setItem('current_user', JSON.stringify(user));
         setSuccess('Вход выполнен успешно! Перенаправляем...');
-
         setTimeout(() => onAuthSuccess(user), 1000);
       } else {
         const errorMessage =
@@ -261,6 +236,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
         type={isPassword ? (showToggle ? 'text' : 'password') : type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onBlur={onBlur}
         placeholder={placeholder}
         className={`w-full bg-[#111] rounded-2xl py-4 pl-12 pr-12 text-sm border transition-all
           ${fieldErrors[field]
@@ -383,6 +359,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
               placeholder="Имя и фамилия"
               value={formData.fullName}
               onChange={(val: string) => handleInputChange('fullName', val)}
+              onBlur={() => handleBlur('fullName')}
               field="fullName"
             />
             {fieldErrors.fullName && (
@@ -397,6 +374,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
               placeholder="Номер телефона"
               value={formData.phone}
               onChange={(val: string) => handleInputChange('phone', val)}
+              onBlur={() => handleBlur('phone')}
               field="phone"
             />
             {fieldErrors.phone && (
@@ -411,6 +389,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
               placeholder="Никнейм (@username)"
               value={formData.nickname}
               onChange={(val: string) => handleInputChange('nickname', val)}
+              onBlur={() => handleBlur('nickname')}
               field="nickname"
             />
             {fieldErrors.nickname && (
@@ -426,6 +405,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
               type="email"
               value={formData.email || ''}
               onChange={(val: string) => handleInputChange('email', val)}
+              onBlur={() => handleBlur('email')}
               field="email"
             />
             {fieldErrors.email && (
@@ -440,6 +420,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
               placeholder="Пароль"
               value={formData.password}
               onChange={(val: string) => handleInputChange('password', val)}
+              onBlur={() => handleBlur('password')}
               field="password"
               isPassword
               showToggle={showPassword}
@@ -457,6 +438,10 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
               placeholder="Повторите пароль"
               value={confirmPassword}
               onChange={setConfirmPassword}
+              onBlur={() => {
+                const errorMsg = formData.password !== confirmPassword ? 'Пароли не совпадают' : '';
+                setFieldErrors(prev => ({ ...prev, confirmPassword: errorMsg }));
+              }}
               field="confirmPassword"
               isPassword
               showToggle={showConfirmPassword}
@@ -536,6 +521,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
                   placeholder="Номер телефона"
                   value={formData.phone}
                   onChange={(val: string) => handleInputChange('phone', val)}
+                  onBlur={() => handleBlur('phone')}
                   field="phone"
                 />
                 {fieldErrors.phone && (
@@ -554,6 +540,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
                   placeholder="Никнейм"
                   value={formData.nickname}
                   onChange={(val: string) => handleInputChange('nickname', val)}
+                  onBlur={() => handleBlur('nickname')}
                   field="nickname"
                 />
                 {fieldErrors.nickname && (
@@ -573,6 +560,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
                   type="email"
                   value={formData.email || ''}
                   onChange={(val: string) => handleInputChange('email', val)}
+                  onBlur={() => handleBlur('email')}
                   field="email"
                 />
                 {fieldErrors.email && (
@@ -589,6 +577,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
               placeholder="Пароль"
               value={formData.password}
               onChange={(val: string) => handleInputChange('password', val)}
+              onBlur={() => handleBlur('password')}
               field="password"
               isPassword
               showToggle={showPassword}
