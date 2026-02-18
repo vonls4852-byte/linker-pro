@@ -26,17 +26,10 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   
-  // Состояния для валидации (показываем только после попытки отправки)
-  const [touched, setTouched] = useState({
-    fullName: false,
-    phone: false,
-    nickname: false,
-    email: false,
-    password: false,
-    confirmPassword: false
-  });
+  // Состояния для ошибок (только после отправки)
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
-  // Валидация полей
+  // Валидация полей (используется только при отправке)
   const validateField = (field: string, value: string): string => {
     switch (field) {
       case 'fullName':
@@ -58,39 +51,9 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
     }
   };
 
-  // Получить ошибку поля (если поле было "тронуто")
-  const getFieldError = (field: string, value: string): string => {
-    if (!touched[field as keyof typeof touched]) return '';
-    return validateField(field, value);
-  };
-
-  // Обработчик изменения поля
-  const handleFieldChange = (
-    setter: React.Dispatch<React.SetStateAction<string>>,
-    field: string,
-    value: string
-  ) => {
-    setter(value);
-  };
-
-  // Обработчик потери фокуса
-  const handleBlur = (field: string) => {
-    setTouched(prev => ({ ...prev, [field]: true }));
-  };
-
   // Проверка формы регистрации
   const validateRegisterForm = (): boolean => {
-    const newTouched = {
-      fullName: true,
-      phone: true,
-      nickname: true,
-      email: true,
-      password: true,
-      confirmPassword: true
-    };
-    setTouched(newTouched);
-
-    const errors = {
+    const errors: Record<string, string> = {
       fullName: validateField('fullName', fullName),
       phone: validateField('phone', phone),
       nickname: validateField('nickname', nickname),
@@ -98,24 +61,21 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
       password: validateField('password', password),
       confirmPassword: password !== confirmPassword ? 'Пароли не совпадают' : ''
     };
-
+    
+    setValidationErrors(errors);
     return !Object.values(errors).some(msg => msg !== '');
   };
 
   // Проверка формы входа
   const validateLoginForm = (): boolean => {
-    const newTouched: any = { password: true };
-    if (loginMethod === 'phone') newTouched.phone = true;
-    if (loginMethod === 'nickname') newTouched.nickname = true;
-    if (loginMethod === 'email') newTouched.email = true;
-    setTouched(newTouched);
-
-    let errors: Record<string, string> = {};
+    const errors: Record<string, string> = {};
+    
     if (loginMethod === 'phone') errors.phone = validateField('phone', phone);
     if (loginMethod === 'nickname') errors.nickname = validateField('nickname', nickname);
     if (loginMethod === 'email') errors.email = validateField('email', email);
     errors.password = validateField('password', password);
-
+    
+    setValidationErrors(errors);
     return !Object.values(errors).some(msg => msg !== '');
   };
 
@@ -197,56 +157,47 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
     }
   };
 
-  // Компонент поля ввода
+  // Компонент поля ввода (БЕЗ onBlur!)
   const InputField = ({
     icon: Icon,
     type = 'text',
     placeholder,
     value,
     onChange,
-    onBlur,
     error,
     isPassword,
     showToggle,
     onToggleShow
-  }: any) => {
-    const hasError = error && error !== '';
-    
-    return (
-      <div className="relative">
-        <Icon size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" />
-        <input
-          type={isPassword ? (showToggle ? 'text' : 'password') : type}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onBlur={onBlur}
-          placeholder={placeholder}
-          className={`w-full bg-[#111] rounded-2xl py-4 pl-12 pr-12 text-sm border transition-all outline-none
-            ${hasError 
-              ? 'border-red-500/50 focus:border-red-500' 
-              : value 
-                ? 'border-green-500/50 focus:border-green-500' 
-                : 'border-white/5 focus:border-blue-500'
-            }`}
-        />
-        {isPassword && (
-          <button
-            type="button"
-            onClick={onToggleShow}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white"
-          >
-            {showToggle ? <EyeOff size={18} /> : <Eye size={18} />}
-          </button>
-        )}
-        {value && !hasError && (
-          <CheckCircle size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-green-500" />
-        )}
-        {hasError && (
-          <AlertCircle size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-red-500" />
-        )}
-      </div>
-    );
-  };
+  }: any) => (
+    <div className="relative">
+      <Icon size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" />
+      <input
+        type={isPassword ? (showToggle ? 'text' : 'password') : type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className={`w-full bg-[#111] rounded-2xl py-4 pl-12 pr-12 text-sm border transition-all outline-none
+          ${error && error !== ''
+            ? 'border-red-500/50 focus:border-red-500' 
+            : value 
+              ? 'border-green-500/50 focus:border-green-500' 
+              : 'border-white/5 focus:border-blue-500'
+          }`}
+      />
+      {isPassword && (
+        <button
+          type="button"
+          onClick={onToggleShow}
+          className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white"
+        >
+          {showToggle ? <EyeOff size={18} /> : <Eye size={18} />}
+        </button>
+      )}
+      {value && (!error || error === '') && (
+        <CheckCircle size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-green-500" />
+      )}
+    </div>
+  );
 
   // Экран выбора
   if (mode === 'choice') {
@@ -324,13 +275,6 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
 
   // Экран регистрации
   if (mode === 'register') {
-    const fullNameError = getFieldError('fullName', fullName);
-    const phoneError = getFieldError('phone', phone);
-    const nicknameError = getFieldError('nickname', nickname);
-    const emailError = getFieldError('email', email);
-    const passwordError = getFieldError('password', password);
-    const confirmError = touched.confirmPassword && password !== confirmPassword ? 'Пароли не совпадают' : '';
-
     return (
       <div className="min-h-screen bg-gradient-to-b from-[#0a0a0a] to-black text-white flex items-center justify-center p-4">
         <div className="w-full max-w-md space-y-6">
@@ -353,14 +297,13 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
                 icon={User}
                 placeholder="Имя и фамилия"
                 value={fullName}
-                onChange={(val: string) => handleFieldChange(setFullName, 'fullName', val)}
-                onBlur={() => handleBlur('fullName')}
-                error={fullNameError}
+                onChange={setFullName}
+                error={validationErrors.fullName}
               />
-              {fullNameError && (
+              {validationErrors.fullName && (
                 <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                   <AlertCircle size={12} />
-                  {fullNameError}
+                  {validationErrors.fullName}
                 </p>
               )}
             </div>
@@ -370,14 +313,13 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
                 icon={Phone}
                 placeholder="Номер телефона"
                 value={phone}
-                onChange={(val: string) => handleFieldChange(setPhone, 'phone', val)}
-                onBlur={() => handleBlur('phone')}
-                error={phoneError}
+                onChange={setPhone}
+                error={validationErrors.phone}
               />
-              {phoneError && (
+              {validationErrors.phone && (
                 <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                   <AlertCircle size={12} />
-                  {phoneError}
+                  {validationErrors.phone}
                 </p>
               )}
             </div>
@@ -387,14 +329,13 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
                 icon={AtSign}
                 placeholder="Никнейм"
                 value={nickname}
-                onChange={(val: string) => handleFieldChange(setNickname, 'nickname', val)}
-                onBlur={() => handleBlur('nickname')}
-                error={nicknameError}
+                onChange={setNickname}
+                error={validationErrors.nickname}
               />
-              {nicknameError && (
+              {validationErrors.nickname && (
                 <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                   <AlertCircle size={12} />
-                  {nicknameError}
+                  {validationErrors.nickname}
                 </p>
               )}
             </div>
@@ -405,14 +346,13 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
                 placeholder="Email (необязательно)"
                 type="email"
                 value={email}
-                onChange={(val: string) => handleFieldChange(setEmail, 'email', val)}
-                onBlur={() => handleBlur('email')}
-                error={emailError}
+                onChange={setEmail}
+                error={validationErrors.email}
               />
-              {emailError && (
+              {validationErrors.email && (
                 <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                   <AlertCircle size={12} />
-                  {emailError}
+                  {validationErrors.email}
                 </p>
               )}
             </div>
@@ -422,17 +362,16 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
                 icon={Lock}
                 placeholder="Пароль"
                 value={password}
-                onChange={(val: string) => handleFieldChange(setPassword, 'password', val)}
-                onBlur={() => handleBlur('password')}
-                error={passwordError}
+                onChange={setPassword}
+                error={validationErrors.password}
                 isPassword
                 showToggle={showPassword}
                 onToggleShow={() => setShowPassword(!showPassword)}
               />
-              {passwordError && (
+              {validationErrors.password && (
                 <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                   <AlertCircle size={12} />
-                  {passwordError}
+                  {validationErrors.password}
                 </p>
               )}
             </div>
@@ -443,16 +382,15 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
                 placeholder="Повторите пароль"
                 value={confirmPassword}
                 onChange={setConfirmPassword}
-                onBlur={() => handleBlur('confirmPassword')}
-                error={confirmError}
+                error={validationErrors.confirmPassword}
                 isPassword
                 showToggle={showConfirmPassword}
                 onToggleShow={() => setShowConfirmPassword(!showConfirmPassword)}
               />
-              {confirmError && (
+              {validationErrors.confirmPassword && (
                 <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                   <AlertCircle size={12} />
-                  {confirmError}
+                  {validationErrors.confirmPassword}
                 </p>
               )}
             </div>
@@ -495,11 +433,6 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
   }
 
   // Экран входа
-  const phoneError = getFieldError('phone', phone);
-  const nicknameError = getFieldError('nickname', nickname);
-  const emailError = getFieldError('email', email);
-  const passwordError = getFieldError('password', password);
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0a0a0a] to-black text-white flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
@@ -527,14 +460,13 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
                 icon={Phone}
                 placeholder="Номер телефона"
                 value={phone}
-                onChange={(val: string) => handleFieldChange(setPhone, 'phone', val)}
-                onBlur={() => handleBlur('phone')}
-                error={phoneError}
+                onChange={setPhone}
+                error={validationErrors.phone}
               />
-              {phoneError && (
+              {validationErrors.phone && (
                 <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                   <AlertCircle size={12} />
-                  {phoneError}
+                  {validationErrors.phone}
                 </p>
               )}
             </div>
@@ -546,14 +478,13 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
                 icon={AtSign}
                 placeholder="Никнейм"
                 value={nickname}
-                onChange={(val: string) => handleFieldChange(setNickname, 'nickname', val)}
-                onBlur={() => handleBlur('nickname')}
-                error={nicknameError}
+                onChange={setNickname}
+                error={validationErrors.nickname}
               />
-              {nicknameError && (
+              {validationErrors.nickname && (
                 <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                   <AlertCircle size={12} />
-                  {nicknameError}
+                  {validationErrors.nickname}
                 </p>
               )}
             </div>
@@ -566,14 +497,13 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
                 placeholder="Email"
                 type="email"
                 value={email}
-                onChange={(val: string) => handleFieldChange(setEmail, 'email', val)}
-                onBlur={() => handleBlur('email')}
-                error={emailError}
+                onChange={setEmail}
+                error={validationErrors.email}
               />
-              {emailError && (
+              {validationErrors.email && (
                 <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                   <AlertCircle size={12} />
-                  {emailError}
+                  {validationErrors.email}
                 </p>
               )}
             </div>
@@ -584,17 +514,16 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
               icon={Lock}
               placeholder="Пароль"
               value={password}
-              onChange={(val: string) => handleFieldChange(setPassword, 'password', val)}
-              onBlur={() => handleBlur('password')}
-              error={passwordError}
+              onChange={setPassword}
+              error={validationErrors.password}
               isPassword
               showToggle={showPassword}
               onToggleShow={() => setShowPassword(!showPassword)}
             />
-            {passwordError && (
+            {validationErrors.password && (
               <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                 <AlertCircle size={12} />
-                {passwordError}
+                {validationErrors.password}
               </p>
             )}
           </div>
