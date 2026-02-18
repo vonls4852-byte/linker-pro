@@ -1,11 +1,86 @@
 "use client";
 import React, { useState } from 'react';
-import { ChevronLeft, Phone, Lock, AtSign, Smartphone, ArrowRight, User, Mail, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface AuthScreenProps {
   onAuthSuccess: (user: any) => void;
   themeColor: string;
 }
+
+// Простые SVG иконки (без библиотек)
+const Icons = {
+  User: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  ),
+  Phone: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+      <line x1="12" y1="18" x2="12" y2="18" />
+    </svg>
+  ),
+  AtSign: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="4" />
+      <path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94" />
+    </svg>
+  ),
+  Mail: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="2" y="4" width="20" height="16" rx="2" />
+      <path d="m22 7-10 7L2 7" />
+    </svg>
+  ),
+  Lock: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
+  ),
+  Smartphone: () => (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+      <line x1="12" y1="18" x2="12" y2="18" />
+    </svg>
+  ),
+  ArrowRight: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <line x1="5" y1="12" x2="19" y2="12" />
+      <polyline points="12 5 19 12 12 19" />
+    </svg>
+  ),
+  ChevronLeft: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <polyline points="15 18 9 12 15 6" />
+    </svg>
+  ),
+  Eye: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  ),
+  EyeOff: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+      <line x1="1" y1="1" x2="23" y2="23" />
+    </svg>
+  ),
+  CheckCircle: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <polyline points="22 4 12 14.01 9 11.01" />
+    </svg>
+  ),
+  AlertCircle: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="8" x2="12" y2="12" />
+      <line x1="12" y1="16" x2="12.01" y2="16" />
+    </svg>
+  )
+};
 
 export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProps) {
   const [mode, setMode] = useState<'choice' | 'login' | 'register'>('choice');
@@ -142,7 +217,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
     }
   };
 
-  // Компонент поля ввода (БЕЗ onBlur!)
+  // Компонент поля ввода
   const InputField = ({
     icon: Icon,
     type = 'text',
@@ -155,7 +230,9 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
     onToggleShow
   }: any) => (
     <div className="relative">
-      <Icon size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" />
+      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500">
+        <Icon />
+      </div>
       <input
         type={isPassword ? (showToggle ? 'text' : 'password') : type}
         value={value}
@@ -175,14 +252,18 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
           onClick={onToggleShow}
           className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white"
         >
-          {showToggle ? <EyeOff size={18} /> : <Eye size={18} />}
+          {showToggle ? <Icons.EyeOff /> : <Icons.Eye />}
         </button>
       )}
       {value && !error && (
-        <CheckCircle size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-green-500" />
+        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-green-500">
+          <Icons.CheckCircle />
+        </div>
       )}
       {error && (
-        <AlertCircle size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-red-500" />
+        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-red-500">
+          <Icons.AlertCircle />
+        </div>
       )}
     </div>
   );
@@ -203,42 +284,48 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
             onClick={() => { setMode('login'); setLoginMethod('phone'); }}
             className="w-full bg-[#111] hover:bg-[#1a1a1a] rounded-2xl p-6 border border-white/5 flex items-center gap-4 transition-all group"
           >
-            <div className="w-14 h-14 rounded-full bg-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Smartphone size={28} className="text-blue-500" />
+            <div className="w-14 h-14 rounded-full bg-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform text-blue-500">
+              <Icons.Smartphone />
             </div>
             <div className="flex-1 text-left">
               <p className="font-bold text-lg">По номеру телефона</p>
               <p className="text-sm text-zinc-500">Быстрый вход</p>
             </div>
-            <ArrowRight size={20} className="text-zinc-500 group-hover:translate-x-1 transition-transform" />
+            <div className="text-zinc-500 group-hover:translate-x-1 transition-transform">
+              <Icons.ArrowRight />
+            </div>
           </button>
 
           <button
             onClick={() => { setMode('login'); setLoginMethod('nickname'); }}
             className="w-full bg-[#111] hover:bg-[#1a1a1a] rounded-2xl p-6 border border-white/5 flex items-center gap-4 transition-all group"
           >
-            <div className="w-14 h-14 rounded-full bg-green-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <AtSign size={28} className="text-green-500" />
+            <div className="w-14 h-14 rounded-full bg-green-500/20 flex items-center justify-center group-hover:scale-110 transition-transform text-green-500">
+              <Icons.AtSign />
             </div>
             <div className="flex-1 text-left">
               <p className="font-bold text-lg">По никнейму</p>
               <p className="text-sm text-zinc-500">Вход с паролем</p>
             </div>
-            <ArrowRight size={20} className="text-zinc-500 group-hover:translate-x-1 transition-transform" />
+            <div className="text-zinc-500 group-hover:translate-x-1 transition-transform">
+              <Icons.ArrowRight />
+            </div>
           </button>
 
           <button
             onClick={() => { setMode('login'); setLoginMethod('email'); }}
             className="w-full bg-[#111] hover:bg-[#1a1a1a] rounded-2xl p-6 border border-white/5 flex items-center gap-4 transition-all group"
           >
-            <div className="w-14 h-14 rounded-full bg-purple-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Mail size={28} className="text-purple-500" />
+            <div className="w-14 h-14 rounded-full bg-purple-500/20 flex items-center justify-center group-hover:scale-110 transition-transform text-purple-500">
+              <Icons.Mail />
             </div>
             <div className="flex-1 text-left">
               <p className="font-bold text-lg">По email</p>
               <p className="text-sm text-zinc-500">Классический вход</p>
             </div>
-            <ArrowRight size={20} className="text-zinc-500 group-hover:translate-x-1 transition-transform" />
+            <div className="text-zinc-500 group-hover:translate-x-1 transition-transform">
+              <Icons.ArrowRight />
+            </div>
           </button>
 
           <div className="relative my-8">
@@ -270,7 +357,9 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
             onClick={() => setMode('choice')}
             className="text-zinc-500 hover:text-white transition-colors mb-4 flex items-center gap-2 group"
           >
-            <ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
+            <div className="group-hover:-translate-x-1 transition-transform">
+              <Icons.ChevronLeft />
+            </div>
             Назад
           </button>
 
@@ -281,7 +370,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
 
           <div className="space-y-4">
             <InputField
-              icon={User}
+              icon={Icons.User}
               placeholder="Имя и фамилия"
               value={fullName}
               onChange={setFullName}
@@ -289,13 +378,13 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
             />
             {errors.fullName && (
               <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                <AlertCircle size={12} />
+                <Icons.AlertCircle />
                 {errors.fullName}
               </p>
             )}
 
             <InputField
-              icon={Phone}
+              icon={Icons.Phone}
               placeholder="Номер телефона"
               value={phone}
               onChange={setPhone}
@@ -303,13 +392,13 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
             />
             {errors.phone && (
               <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                <AlertCircle size={12} />
+                <Icons.AlertCircle />
                 {errors.phone}
               </p>
             )}
 
             <InputField
-              icon={AtSign}
+              icon={Icons.AtSign}
               placeholder="Никнейм"
               value={nickname}
               onChange={setNickname}
@@ -317,13 +406,13 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
             />
             {errors.nickname && (
               <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                <AlertCircle size={12} />
+                <Icons.AlertCircle />
                 {errors.nickname}
               </p>
             )}
 
             <InputField
-              icon={Mail}
+              icon={Icons.Mail}
               placeholder="Email (необязательно)"
               type="email"
               value={email}
@@ -332,13 +421,13 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
             />
             {errors.email && (
               <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                <AlertCircle size={12} />
+                <Icons.AlertCircle />
                 {errors.email}
               </p>
             )}
 
             <InputField
-              icon={Lock}
+              icon={Icons.Lock}
               placeholder="Пароль"
               value={password}
               onChange={setPassword}
@@ -349,13 +438,13 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
             />
             {errors.password && (
               <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                <AlertCircle size={12} />
+                <Icons.AlertCircle />
                 {errors.password}
               </p>
             )}
 
             <InputField
-              icon={Lock}
+              icon={Icons.Lock}
               placeholder="Повторите пароль"
               value={confirmPassword}
               onChange={setConfirmPassword}
@@ -366,7 +455,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
             />
             {errors.confirmPassword && (
               <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                <AlertCircle size={12} />
+                <Icons.AlertCircle />
                 {errors.confirmPassword}
               </p>
             )}
@@ -375,7 +464,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
           {error && (
             <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4">
               <p className="text-red-500 text-sm text-center flex items-center justify-center gap-2">
-                <AlertCircle size={16} />
+                <Icons.AlertCircle />
                 {error}
               </p>
             </div>
@@ -384,7 +473,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
           {success && (
             <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-4">
               <p className="text-green-500 text-sm text-center flex items-center justify-center gap-2">
-                <CheckCircle size={16} />
+                <Icons.CheckCircle />
                 {success}
               </p>
             </div>
@@ -416,7 +505,9 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
           onClick={() => setMode('choice')}
           className="text-zinc-500 hover:text-white transition-colors mb-4 flex items-center gap-2 group"
         >
-          <ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
+          <div className="group-hover:-translate-x-1 transition-transform">
+            <Icons.ChevronLeft />
+          </div>
           Назад
         </button>
 
@@ -433,7 +524,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
           {loginMethod === 'phone' && (
             <>
               <InputField
-                icon={Phone}
+                icon={Icons.Phone}
                 placeholder="Номер телефона"
                 value={phone}
                 onChange={setPhone}
@@ -441,7 +532,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
               />
               {errors.phone && (
                 <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                  <AlertCircle size={12} />
+                  <Icons.AlertCircle />
                   {errors.phone}
                 </p>
               )}
@@ -451,7 +542,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
           {loginMethod === 'nickname' && (
             <>
               <InputField
-                icon={AtSign}
+                icon={Icons.AtSign}
                 placeholder="Никнейм"
                 value={nickname}
                 onChange={setNickname}
@@ -459,7 +550,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
               />
               {errors.nickname && (
                 <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                  <AlertCircle size={12} />
+                  <Icons.AlertCircle />
                   {errors.nickname}
                 </p>
               )}
@@ -469,7 +560,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
           {loginMethod === 'email' && (
             <>
               <InputField
-                icon={Mail}
+                icon={Icons.Mail}
                 placeholder="Email"
                 type="email"
                 value={email}
@@ -478,7 +569,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
               />
               {errors.email && (
                 <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                  <AlertCircle size={12} />
+                  <Icons.AlertCircle />
                   {errors.email}
                 </p>
               )}
@@ -486,7 +577,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
           )}
 
           <InputField
-            icon={Lock}
+            icon={Icons.Lock}
             placeholder="Пароль"
             value={password}
             onChange={setPassword}
@@ -497,7 +588,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
           />
           {errors.password && (
             <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-              <AlertCircle size={12} />
+              <Icons.AlertCircle />
               {errors.password}
             </p>
           )}
@@ -506,7 +597,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
         {error && (
           <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4">
             <p className="text-red-500 text-sm text-center flex items-center justify-center gap-2">
-              <AlertCircle size={16} />
+              <Icons.AlertCircle />
               {error}
             </p>
           </div>
@@ -515,7 +606,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
         {success && (
           <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-4">
             <p className="text-green-500 text-sm text-center flex items-center justify-center gap-2">
-              <CheckCircle size={16} />
+              <Icons.CheckCircle />
               {success}
             </p>
           </div>
