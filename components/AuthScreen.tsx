@@ -26,62 +26,48 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   
-  // Состояния для ошибок (только после отправки)
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  // Состояния для ошибок
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Валидация полей (используется только при отправке)
-  const validateField = (field: string, value: string): string => {
-    switch (field) {
-      case 'fullName':
-        return !value.trim() ? 'Имя обязательно' : 
-               value.trim().length < 2 ? 'Минимум 2 символа' : '';
-      case 'phone':
-        return !value.trim() ? 'Телефон обязателен' :
-               !/^\+?[0-9]{10,15}$/.test(value.replace(/\D/g, '')) ? 'Неверный формат телефона' : '';
-      case 'nickname':
-        return !value.trim() ? 'Никнейм обязателен' :
-               !/^[a-zA-Z0-9_]{3,20}$/.test(value) ? '3-20 символов (буквы, цифры, _)' : '';
-      case 'email':
-        return value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? 'Неверный email' : '';
-      case 'password':
-        return !value ? 'Пароль обязателен' :
-               value.length < 6 ? 'Минимум 6 символов' : '';
-      default:
-        return '';
-    }
+  // Валидация (только при отправке)
+  const validateRegister = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!fullName.trim()) newErrors.fullName = 'Имя обязательно';
+    else if (fullName.trim().length < 2) newErrors.fullName = 'Минимум 2 символа';
+
+    if (!phone.trim()) newErrors.phone = 'Телефон обязателен';
+    else if (!/^\+?[0-9]{10,15}$/.test(phone.replace(/\D/g, ''))) newErrors.phone = 'Неверный формат телефона';
+
+    if (!nickname.trim()) newErrors.nickname = 'Никнейм обязателен';
+    else if (!/^[a-zA-Z0-9_]{3,20}$/.test(nickname)) newErrors.nickname = '3-20 символов (буквы, цифры, _)';
+
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) newErrors.email = 'Неверный email';
+
+    if (!password) newErrors.password = 'Пароль обязателен';
+    else if (password.length < 6) newErrors.password = 'Минимум 6 символов';
+
+    if (password !== confirmPassword) newErrors.confirmPassword = 'Пароли не совпадают';
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  // Проверка формы регистрации
-  const validateRegisterForm = (): boolean => {
-    const errors: Record<string, string> = {
-      fullName: validateField('fullName', fullName),
-      phone: validateField('phone', phone),
-      nickname: validateField('nickname', nickname),
-      email: validateField('email', email),
-      password: validateField('password', password),
-      confirmPassword: password !== confirmPassword ? 'Пароли не совпадают' : ''
-    };
+  const validateLogin = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (loginMethod === 'phone' && !phone.trim()) newErrors.phone = 'Введите телефон';
+    if (loginMethod === 'nickname' && !nickname.trim()) newErrors.nickname = 'Введите никнейм';
+    if (loginMethod === 'email' && !email.trim()) newErrors.email = 'Введите email';
     
-    setValidationErrors(errors);
-    return !Object.values(errors).some(msg => msg !== '');
+    if (!password) newErrors.password = 'Введите пароль';
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  // Проверка формы входа
-  const validateLoginForm = (): boolean => {
-    const errors: Record<string, string> = {};
-    
-    if (loginMethod === 'phone') errors.phone = validateField('phone', phone);
-    if (loginMethod === 'nickname') errors.nickname = validateField('nickname', nickname);
-    if (loginMethod === 'email') errors.email = validateField('email', email);
-    errors.password = validateField('password', password);
-    
-    setValidationErrors(errors);
-    return !Object.values(errors).some(msg => msg !== '');
-  };
-
-  // Регистрация
   const handleRegister = async () => {
-    if (!validateRegisterForm()) return;
+    if (!validateRegister()) return;
 
     setLoading(true);
     setError('');
@@ -117,9 +103,8 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
     }
   };
 
-  // Вход
   const handleLogin = async () => {
-    if (!validateLoginForm()) return;
+    if (!validateLogin()) return;
 
     setLoading(true);
     setError('');
@@ -177,7 +162,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         className={`w-full bg-[#111] rounded-2xl py-4 pl-12 pr-12 text-sm border transition-all outline-none
-          ${error && error !== ''
+          ${error 
             ? 'border-red-500/50 focus:border-red-500' 
             : value 
               ? 'border-green-500/50 focus:border-green-500' 
@@ -193,8 +178,11 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
           {showToggle ? <EyeOff size={18} /> : <Eye size={18} />}
         </button>
       )}
-      {value && (!error || error === '') && (
+      {value && !error && (
         <CheckCircle size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-green-500" />
+      )}
+      {error && (
+        <AlertCircle size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-red-500" />
       )}
     </div>
   );
@@ -292,108 +280,96 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
           <p className="text-zinc-500 text-sm mb-8">Заполните все поля для создания аккаунта</p>
 
           <div className="space-y-4">
-            <div>
-              <InputField
-                icon={User}
-                placeholder="Имя и фамилия"
-                value={fullName}
-                onChange={setFullName}
-                error={validationErrors.fullName}
-              />
-              {validationErrors.fullName && (
-                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                  <AlertCircle size={12} />
-                  {validationErrors.fullName}
-                </p>
-              )}
-            </div>
+            <InputField
+              icon={User}
+              placeholder="Имя и фамилия"
+              value={fullName}
+              onChange={setFullName}
+              error={errors.fullName}
+            />
+            {errors.fullName && (
+              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                <AlertCircle size={12} />
+                {errors.fullName}
+              </p>
+            )}
 
-            <div>
-              <InputField
-                icon={Phone}
-                placeholder="Номер телефона"
-                value={phone}
-                onChange={setPhone}
-                error={validationErrors.phone}
-              />
-              {validationErrors.phone && (
-                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                  <AlertCircle size={12} />
-                  {validationErrors.phone}
-                </p>
-              )}
-            </div>
+            <InputField
+              icon={Phone}
+              placeholder="Номер телефона"
+              value={phone}
+              onChange={setPhone}
+              error={errors.phone}
+            />
+            {errors.phone && (
+              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                <AlertCircle size={12} />
+                {errors.phone}
+              </p>
+            )}
 
-            <div>
-              <InputField
-                icon={AtSign}
-                placeholder="Никнейм"
-                value={nickname}
-                onChange={setNickname}
-                error={validationErrors.nickname}
-              />
-              {validationErrors.nickname && (
-                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                  <AlertCircle size={12} />
-                  {validationErrors.nickname}
-                </p>
-              )}
-            </div>
+            <InputField
+              icon={AtSign}
+              placeholder="Никнейм"
+              value={nickname}
+              onChange={setNickname}
+              error={errors.nickname}
+            />
+            {errors.nickname && (
+              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                <AlertCircle size={12} />
+                {errors.nickname}
+              </p>
+            )}
 
-            <div>
-              <InputField
-                icon={Mail}
-                placeholder="Email (необязательно)"
-                type="email"
-                value={email}
-                onChange={setEmail}
-                error={validationErrors.email}
-              />
-              {validationErrors.email && (
-                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                  <AlertCircle size={12} />
-                  {validationErrors.email}
-                </p>
-              )}
-            </div>
+            <InputField
+              icon={Mail}
+              placeholder="Email (необязательно)"
+              type="email"
+              value={email}
+              onChange={setEmail}
+              error={errors.email}
+            />
+            {errors.email && (
+              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                <AlertCircle size={12} />
+                {errors.email}
+              </p>
+            )}
 
-            <div>
-              <InputField
-                icon={Lock}
-                placeholder="Пароль"
-                value={password}
-                onChange={setPassword}
-                error={validationErrors.password}
-                isPassword
-                showToggle={showPassword}
-                onToggleShow={() => setShowPassword(!showPassword)}
-              />
-              {validationErrors.password && (
-                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                  <AlertCircle size={12} />
-                  {validationErrors.password}
-                </p>
-              )}
-            </div>
+            <InputField
+              icon={Lock}
+              placeholder="Пароль"
+              value={password}
+              onChange={setPassword}
+              error={errors.password}
+              isPassword
+              showToggle={showPassword}
+              onToggleShow={() => setShowPassword(!showPassword)}
+            />
+            {errors.password && (
+              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                <AlertCircle size={12} />
+                {errors.password}
+              </p>
+            )}
 
-            <div>
-              <InputField
-                icon={Lock}
-                placeholder="Повторите пароль"
-                value={confirmPassword}
-                onChange={setConfirmPassword}
-                error={validationErrors.confirmPassword}
-                isPassword
-                showToggle={showConfirmPassword}
-                onToggleShow={() => setShowConfirmPassword(!showConfirmPassword)}
-              />
-              {validationErrors.confirmPassword && (
-                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                  <AlertCircle size={12} />
-                  {validationErrors.confirmPassword}
-                </p>
-              )}
-            </div>
+            <InputField
+              icon={Lock}
+              placeholder="Повторите пароль"
+              value={confirmPassword}
+              onChange={setConfirmPassword}
+              error={errors.confirmPassword}
+              isPassword
+              showToggle={showConfirmPassword}
+              onToggleShow={() => setShowConfirmPassword(!showConfirmPassword)}
+            />
+            {errors.confirmPassword && (
+              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                <AlertCircle size={12} />
+                {errors.confirmPassword}
+              </p>
+            )}
           </div>
 
           {error && (
@@ -455,78 +431,76 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
 
         <div className="space-y-4">
           {loginMethod === 'phone' && (
-            <div>
+            <>
               <InputField
                 icon={Phone}
                 placeholder="Номер телефона"
                 value={phone}
                 onChange={setPhone}
-                error={validationErrors.phone}
+                error={errors.phone}
               />
-              {validationErrors.phone && (
+              {errors.phone && (
                 <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                   <AlertCircle size={12} />
-                  {validationErrors.phone}
+                  {errors.phone}
                 </p>
               )}
-            </div>
+            </>
           )}
 
           {loginMethod === 'nickname' && (
-            <div>
+            <>
               <InputField
                 icon={AtSign}
                 placeholder="Никнейм"
                 value={nickname}
                 onChange={setNickname}
-                error={validationErrors.nickname}
+                error={errors.nickname}
               />
-              {validationErrors.nickname && (
+              {errors.nickname && (
                 <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                   <AlertCircle size={12} />
-                  {validationErrors.nickname}
+                  {errors.nickname}
                 </p>
               )}
-            </div>
+            </>
           )}
 
           {loginMethod === 'email' && (
-            <div>
+            <>
               <InputField
                 icon={Mail}
                 placeholder="Email"
                 type="email"
                 value={email}
                 onChange={setEmail}
-                error={validationErrors.email}
+                error={errors.email}
               />
-              {validationErrors.email && (
+              {errors.email && (
                 <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                   <AlertCircle size={12} />
-                  {validationErrors.email}
+                  {errors.email}
                 </p>
               )}
-            </div>
+            </>
           )}
 
-          <div>
-            <InputField
-              icon={Lock}
-              placeholder="Пароль"
-              value={password}
-              onChange={setPassword}
-              error={validationErrors.password}
-              isPassword
-              showToggle={showPassword}
-              onToggleShow={() => setShowPassword(!showPassword)}
-            />
-            {validationErrors.password && (
-              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                <AlertCircle size={12} />
-                {validationErrors.password}
-              </p>
-            )}
-          </div>
+          <InputField
+            icon={Lock}
+            placeholder="Пароль"
+            value={password}
+            onChange={setPassword}
+            error={errors.password}
+            isPassword
+            showToggle={showPassword}
+            onToggleShow={() => setShowPassword(!showPassword)}
+          />
+          {errors.password && (
+            <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+              <AlertCircle size={12} />
+              {errors.password}
+            </p>
+          )}
         </div>
 
         {error && (
