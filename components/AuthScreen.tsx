@@ -34,6 +34,21 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
   const [success, setSuccess] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
+  // Debounce функция для валидации
+  const debounce = (fn: Function, delay: number) => {
+    let timeoutId: NodeJS.Timeout;
+    return (...args: any[]) => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => fn(...args), delay);
+    };
+  };
+
+  // Создаем debounced версию валидации
+  const debouncedValidate = debounce((field: string, value: string) => {
+    const errorMsg = validateField(field, value);
+    setFieldErrors(prev => ({ ...prev, [field]: errorMsg }));
+  }, 500);
+
   // Валидация полей
   const validateField = (field: string, value: string): string => {
     switch (field) {
@@ -52,28 +67,32 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
     }
   };
 
-  // Обработчик изменений полей
+  // Обработчик изменений полей (НОВЫЙ)
   const handleInputChange = (field: keyof UserData, value: string) => {
+    // Сначала обновляем значение
     setFormData(prev => ({ ...prev, [field]: value }));
-    const errorMsg = validateField(field, value);
-    setFieldErrors(prev => ({ ...prev, [field]: errorMsg }));
-    setError(''); // Сбрасываем общую ошибку
+
+    // Запускаем валидацию с задержкой
+    debouncedValidate(field, value);
+
+    // Сбрасываем общую ошибку
+    setError('');
   };
 
   // Валидация всей формы регистрации
   const validateRegister = (): boolean => {
     const errors: Record<string, string> = {};
-    
+
     errors.fullName = validateField('fullName', formData.fullName);
     errors.phone = validateField('phone', formData.phone);
     errors.nickname = validateField('nickname', formData.nickname);
     if (formData.email) errors.email = validateField('email', formData.email);
     errors.password = validateField('password', formData.password);
-    
+
     if (formData.password !== confirmPassword) {
       errors.confirmPassword = 'Пароли не совпадают';
     }
-    
+
     setFieldErrors(errors);
     return !Object.values(errors).some(msg => msg !== '');
   };
@@ -81,7 +100,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
   // Валидация формы входа
   const validateLogin = (): boolean => {
     const errors: Record<string, string> = {};
-    
+
     if (loginMethod === 'phone') {
       errors.phone = validateField('phone', formData.phone);
     } else if (loginMethod === 'nickname') {
@@ -89,9 +108,9 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
     } else if (loginMethod === 'email') {
       errors.email = validateField('email', formData.email || '');
     }
-    
+
     errors.password = validateField('password', formData.password);
-    
+
     setFieldErrors(errors);
     return !Object.values(errors).some(msg => msg !== '');
   };
@@ -99,15 +118,15 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
   // Регистрация
   const handleRegister = async () => {
     if (!validateRegister()) return;
-    
+
     setLoading(true);
     setError('');
     setSuccess('');
-    
+
     try {
       const response = await fetch('/api/users', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
@@ -120,30 +139,30 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
           password: formData.password
         })
       });
-      
+
       let data;
       try {
         data = await response.json();
       } catch {
         throw new Error('Сервер вернул некорректный ответ');
       }
-      
+
       console.log('📥 Ответ сервера:', data);
-      
+
       if (response.ok) {
         // Успешная регистрация
         const user = data.user || data;
         localStorage.setItem('current_user', JSON.stringify(user));
         setSuccess('Регистрация успешна! Перенаправляем...');
-        
+
         // Небольшая задержка для показа сообщения
         setTimeout(() => onAuthSuccess(user), 1000);
       } else {
         // Ошибка от сервера
-        const errorMessage = 
-          data.error || 
-          data.message || 
-          data.details || 
+        const errorMessage =
+          data.error ||
+          data.message ||
+          data.details ||
           `Ошибка ${response.status}: ${response.statusText}`;
         throw new Error(errorMessage);
       }
@@ -158,17 +177,17 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
   // Вход
   const handleLogin = async () => {
     if (!validateLogin()) return;
-    
+
     setLoading(true);
     setError('');
     setSuccess('');
-    
+
     try {
       const payload: any = {
         action: 'login',
         password: formData.password
       };
-      
+
       // Добавляем идентификатор в зависимости от метода входа
       if (loginMethod === 'phone') {
         payload.phone = formData.phone.replace(/\D/g, '');
@@ -177,37 +196,37 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
       } else if (loginMethod === 'email') {
         payload.email = formData.email?.trim();
       }
-      
+
       const response = await fetch('/api/users', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
         body: JSON.stringify(payload)
       });
-      
+
       let data;
       try {
         data = await response.json();
       } catch {
         throw new Error('Сервер вернул некорректный ответ');
       }
-      
+
       console.log('📥 Ответ сервера:', data);
-      
+
       if (response.ok) {
         // Успешный вход
         const user = data.user || data;
         localStorage.setItem('current_user', JSON.stringify(user));
         setSuccess('Вход выполнен успешно! Перенаправляем...');
-        
+
         setTimeout(() => onAuthSuccess(user), 1000);
       } else {
-        const errorMessage = 
-          data.error || 
-          data.message || 
-          data.details || 
+        const errorMessage =
+          data.error ||
+          data.message ||
+          data.details ||
           `Ошибка ${response.status}: ${response.statusText}`;
         throw new Error(errorMessage);
       }
@@ -220,11 +239,11 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
   };
 
   // Компонент поля ввода
-  const InputField = ({ 
-    icon: Icon, 
-    type = 'text', 
-    placeholder, 
-    value, 
+  const InputField = ({
+    icon: Icon,
+    type = 'text',
+    placeholder,
+    value,
     onChange,
     field,
     showToggle,
@@ -239,10 +258,10 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         className={`w-full bg-[#111] rounded-2xl py-4 pl-12 pr-12 text-sm border transition-all
-          ${fieldErrors[field] 
-            ? 'border-red-500/50 focus:border-red-500' 
-            : value 
-              ? 'border-green-500/50 focus:border-green-500' 
+          ${fieldErrors[field]
+            ? 'border-red-500/50 focus:border-red-500'
+            : value
+              ? 'border-green-500/50 focus:border-green-500'
               : 'border-white/5 focus:border-blue-500'
           } outline-none`}
       />
@@ -272,7 +291,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
             </h1>
             <p className="text-zinc-500 text-sm">Войди в мировую соцсеть</p>
           </div>
-          
+
           <button
             onClick={() => { setMode('login'); setLoginMethod('phone'); }}
             className="w-full bg-[#111] hover:bg-[#1a1a1a] rounded-2xl p-6 border border-white/5 flex items-center gap-4 transition-all group"
@@ -286,7 +305,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
             </div>
             <ArrowRight size={20} className="text-zinc-500 group-hover:translate-x-1 transition-transform" />
           </button>
-          
+
           <button
             onClick={() => { setMode('login'); setLoginMethod('nickname'); }}
             className="w-full bg-[#111] hover:bg-[#1a1a1a] rounded-2xl p-6 border border-white/5 flex items-center gap-4 transition-all group"
@@ -314,7 +333,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
             </div>
             <ArrowRight size={20} className="text-zinc-500 group-hover:translate-x-1 transition-transform" />
           </button>
-          
+
           <div className="relative my-8">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-white/5"></div>
@@ -323,7 +342,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
               <span className="px-4 bg-[#0a0a0a] text-zinc-600">или</span>
             </div>
           </div>
-          
+
           <button
             onClick={() => setMode('register')}
             className="w-full py-4 rounded-2xl font-bold border border-white/10 hover:bg-white/5 transition-all"
@@ -347,12 +366,12 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
             <ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
             Назад
           </button>
-          
+
           <h2 className="text-3xl font-black mb-2" style={{ color: themeColor }}>
             Регистрация
           </h2>
           <p className="text-zinc-500 text-sm mb-8">Заполните все поля для создания аккаунта</p>
-          
+
           <div className="space-y-4">
             <InputField
               icon={User}
@@ -445,7 +464,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
               </p>
             )}
           </div>
-          
+
           {error && (
             <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4">
               <p className="text-red-500 text-sm text-center flex items-center justify-center gap-2">
@@ -454,7 +473,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
               </p>
             </div>
           )}
-          
+
           {success && (
             <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-4">
               <p className="text-green-500 text-sm text-center flex items-center justify-center gap-2">
@@ -463,7 +482,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
               </p>
             </div>
           )}
-          
+
           <button
             onClick={handleRegister}
             disabled={loading || Object.values(fieldErrors).some(msg => msg !== '')}
@@ -494,7 +513,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
             <ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
             Назад
           </button>
-          
+
           <h2 className="text-3xl font-black mb-2" style={{ color: themeColor }}>
             Вход
           </h2>
@@ -503,7 +522,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
             {loginMethod === 'nickname' && 'Введите никнейм и пароль'}
             {loginMethod === 'email' && 'Введите email и пароль'}
           </p>
-          
+
           <div className="space-y-4">
             {loginMethod === 'phone' && (
               <>
@@ -577,7 +596,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
               </p>
             )}
           </div>
-          
+
           {error && (
             <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4">
               <p className="text-red-500 text-sm text-center flex items-center justify-center gap-2">
@@ -586,7 +605,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
               </p>
             </div>
           )}
-          
+
           {success && (
             <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-4">
               <p className="text-green-500 text-sm text-center flex items-center justify-center gap-2">
@@ -595,7 +614,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
               </p>
             </div>
           )}
-          
+
           <button
             onClick={handleLogin}
             disabled={loading || Object.values(fieldErrors).some(msg => msg !== '')}
@@ -609,7 +628,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
               </div>
             ) : 'Войти'}
           </button>
-          
+
           <div className="text-center space-y-2">
             <button
               onClick={() => setMode('register')}
@@ -617,9 +636,9 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
             >
               Нет аккаунта? Зарегистрироваться
             </button>
-            
+
             <button
-              onClick={() => {/* Добавить восстановление пароля */}}
+              onClick={() => {/* Добавить восстановление пароля */ }}
               className="text-xs text-zinc-600 hover:text-zinc-500 transition-colors block w-full"
             >
               Забыли пароль?
