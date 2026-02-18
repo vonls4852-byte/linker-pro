@@ -263,7 +263,30 @@ export default function LinkerPro() {
   };
 
   const handleLogout = () => {
+    // Сохраняем настройки перед выходом
+    const settings = {
+      themeColor,
+      themeMode,
+      themeStyle,
+      themeBlur,
+      themeAnimations,
+      isTester: currentUser?.isTester || false,
+      testerSince: currentUser?.testerSince,
+      experimentsCount,
+      testedFeatures,
+      bugsFound,
+      testTime,
+      achievements,
+      testerLevel
+    };
+
+    // Сохраняем настройки отдельно от пользователя
+    localStorage.setItem('app_settings', JSON.stringify(settings));
+
+    // Удаляем только пользователя
     localStorage.removeItem('current_user');
+
+    // Очищаем состояния
     setCurrentUser(null);
     setUserName('');
     setUserBio('');
@@ -1423,32 +1446,56 @@ export default function LinkerPro() {
   };
 
   // ==================== 20. useEffect ====================
-
+  
   // 2.1 Загрузка данных
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      // Сначала загружаем сохранённые настройки (тема, тестировщик)
+      const savedSettings = localStorage.getItem('app_settings');
+      if (savedSettings) {
+        const settings = JSON.parse(savedSettings);
+        setThemeColor(settings.themeColor || '#3b82f6');
+        setThemeMode(settings.themeMode || 'dark');
+        setThemeStyle(settings.themeStyle || 'gradient');
+        setThemeBlur(settings.themeBlur !== false);
+        setThemeAnimations(settings.themeAnimations !== false);
+        setIsTester(settings.isTester || false);
+        setExperimentsCount(settings.experimentsCount || 0);
+        setTestedFeatures(settings.testedFeatures || []);
+        setBugsFound(settings.bugsFound || 0);
+        setTestTime(settings.testTime || 0);
+        setAchievements(settings.achievements || []);
+        setTesterLevel(settings.testerLevel || 1);
+      }
+
+      // Потом загружаем пользователя
       const savedUser = localStorage.getItem('current_user');
       if (savedUser) {
         const user = JSON.parse(savedUser);
         setCurrentUser(user);
         setUserName(user.name || '');
         setUserBio(user.bio || '');
-        setThemeColor(user.themeColor || '#3b82f6');
-        setThemeStyle(user.themeStyle || 'gradient');
-        setThemeBlur(user.themeBlur !== false);
-        setThemeAnimations(user.themeAnimations !== false);
-        setIsTester(user.isTester || false);
+
+        // Настройки пользователя (если есть) имеют приоритет
+        if (user.themeColor) setThemeColor(user.themeColor);
+        if (user.themeStyle) setThemeStyle(user.themeStyle);
+        if (user.themeBlur !== undefined) setThemeBlur(user.themeBlur);
+        if (user.themeAnimations !== undefined) setThemeAnimations(user.themeAnimations);
+        if (user.isTester !== undefined) setIsTester(user.isTester);
+
         loadNotifications();
         loadPosts();
         loadFriends();
         loadFriendRequests();
       }
 
+      // Загружаем тему из отдельного хранилища
       const savedTheme = localStorage.getItem('theme');
       if (savedTheme) {
         setThemeMode(savedTheme as 'dark' | 'light');
       }
 
+      // Загружаем сохранённые аккаунты
       const saved = localStorage.getItem('saved_accounts');
       if (saved) {
         setSavedUsers(JSON.parse(saved));
