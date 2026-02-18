@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from 'react';
-import { ChevronLeft, Phone, Lock, AtSign, Smartphone, ArrowRight, User, Mail, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react';
+import { ChevronLeft, Phone, Lock, AtSign, Smartphone, ArrowRight, User, Mail, Eye, EyeOff } from 'lucide-react';
 
 interface AuthScreenProps {
   onAuthSuccess: (user: any) => void;
@@ -31,83 +31,26 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  // Валидация полей
-  const validateField = (field: string, value: string): string => {
-    switch (field) {
-      case 'fullName':
-        return value.trim().length < 2 ? 'Имя должно содержать минимум 2 символа' : '';
-      case 'phone':
-        return !/^\+?[0-9]{10,15}$/.test(value.replace(/\D/g, '')) ? 'Введите корректный номер телефона' : '';
-      case 'nickname':
-        return !/^[a-zA-Z0-9_]{3,20}$/.test(value) ? 'Никнейм должен содержать 3-20 символов (буквы, цифры, _)' : '';
-      case 'email':
-        return value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? 'Введите корректный email' : '';
-      case 'password':
-        return value.length < 6 ? 'Пароль должен быть минимум 6 символов' : '';
-      default:
-        return '';
-    }
-  };
-
-  // Обработчик изменений полей (ТОЛЬКО ОБНОВЛЕНИЕ)
+  // Простое обновление полей
   const handleInputChange = (field: keyof UserData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    setError('');
-  };
-
-  // Валидация при потере фокуса
-  const handleBlur = (field: keyof UserData) => {
-    const value = formData[field] || '';
-    const errorMsg = validateField(field, value);
-    setFieldErrors(prev => ({ ...prev, [field]: errorMsg }));
-  };
-
-  // Валидация всей формы регистрации
-  const validateRegister = (): boolean => {
-    const errors: Record<string, string> = {};
-
-    errors.fullName = validateField('fullName', formData.fullName);
-    errors.phone = validateField('phone', formData.phone);
-    errors.nickname = validateField('nickname', formData.nickname);
-    if (formData.email) errors.email = validateField('email', formData.email);
-    errors.password = validateField('password', formData.password);
-
-    if (formData.password !== confirmPassword) {
-      errors.confirmPassword = 'Пароли не совпадают';
-    }
-
-    setFieldErrors(errors);
-    return !Object.values(errors).some(msg => msg !== '');
-  };
-
-  // Валидация формы входа
-  const validateLogin = (): boolean => {
-    const errors: Record<string, string> = {};
-
-    if (loginMethod === 'phone') {
-      errors.phone = validateField('phone', formData.phone);
-    } else if (loginMethod === 'nickname') {
-      errors.nickname = validateField('nickname', formData.nickname);
-    } else if (loginMethod === 'email') {
-      errors.email = validateField('email', formData.email || '');
-    }
-
-    errors.password = validateField('password', formData.password);
-
-    setFieldErrors(errors);
-    return !Object.values(errors).some(msg => msg !== '');
   };
 
   // Регистрация
   const handleRegister = async () => {
-    if (!validateRegister()) return;
+    // Простая проверка на заполненность
+    if (!formData.fullName || !formData.phone || !formData.nickname || !formData.password) {
+      setError('Заполните все поля');
+      return;
+    }
+    if (formData.password !== confirmPassword) {
+      setError('Пароли не совпадают');
+      return;
+    }
 
     setLoading(true);
     setError('');
-    setSuccess('');
 
     try {
       const response = await fetch('/api/users', {
@@ -126,31 +69,19 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
         })
       });
 
-      let data;
-      try {
-        data = await response.json();
-      } catch {
-        throw new Error('Сервер вернул некорректный ответ');
-      }
-
-      console.log('📥 Ответ сервера:', data);
+      const data = await response.json();
+      console.log('📥 Ответ:', data);
 
       if (response.ok) {
         const user = data.user || data;
         localStorage.setItem('current_user', JSON.stringify(user));
-        setSuccess('Регистрация успешна! Перенаправляем...');
-        setTimeout(() => onAuthSuccess(user), 1000);
+        onAuthSuccess(user);
       } else {
-        const errorMessage =
-          data.error ||
-          data.message ||
-          data.details ||
-          `Ошибка ${response.status}: ${response.statusText}`;
-        throw new Error(errorMessage);
+        setError(data.error || 'Ошибка регистрации');
       }
     } catch (error: any) {
-      console.error('❌ Ошибка регистрации:', error);
-      setError(error.message || 'Ошибка соединения с сервером');
+      console.error('❌ Ошибка:', error);
+      setError('Ошибка соединения с сервером');
     } finally {
       setLoading(false);
     }
@@ -158,11 +89,26 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
 
   // Вход
   const handleLogin = async () => {
-    if (!validateLogin()) return;
+    // Простая проверка
+    if (!formData.password) {
+      setError('Введите пароль');
+      return;
+    }
+    if (loginMethod === 'phone' && !formData.phone) {
+      setError('Введите номер телефона');
+      return;
+    }
+    if (loginMethod === 'nickname' && !formData.nickname) {
+      setError('Введите никнейм');
+      return;
+    }
+    if (loginMethod === 'email' && !formData.email) {
+      setError('Введите email');
+      return;
+    }
 
     setLoading(true);
     setError('');
-    setSuccess('');
 
     try {
       const payload: any = {
@@ -187,48 +133,34 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
         body: JSON.stringify(payload)
       });
 
-      let data;
-      try {
-        data = await response.json();
-      } catch {
-        throw new Error('Сервер вернул некорректный ответ');
-      }
-
-      console.log('📥 Ответ сервера:', data);
+      const data = await response.json();
+      console.log('📥 Ответ:', data);
 
       if (response.ok) {
         const user = data.user || data;
         localStorage.setItem('current_user', JSON.stringify(user));
-        setSuccess('Вход выполнен успешно! Перенаправляем...');
-        setTimeout(() => onAuthSuccess(user), 1000);
+        onAuthSuccess(user);
       } else {
-        const errorMessage =
-          data.error ||
-          data.message ||
-          data.details ||
-          `Ошибка ${response.status}: ${response.statusText}`;
-        throw new Error(errorMessage);
+        setError(data.error || 'Ошибка входа');
       }
     } catch (error: any) {
-      console.error('❌ Ошибка входа:', error);
-      setError(error.message || 'Ошибка соединения с сервером');
+      console.error('❌ Ошибка:', error);
+      setError('Ошибка соединения с сервером');
     } finally {
       setLoading(false);
     }
   };
 
-  // Компонент поля ввода
+  // Компонент поля ввода (МАКСИМАЛЬНО ПРОСТОЙ)
   const InputField = ({
     icon: Icon,
     type = 'text',
     placeholder,
     value,
     onChange,
-    onBlur,
-    field,
+    isPassword,
     showToggle,
-    onToggleShow,
-    isPassword
+    onToggleShow
   }: any) => (
     <div className="relative">
       <Icon size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" />
@@ -236,15 +168,8 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
         type={isPassword ? (showToggle ? 'text' : 'password') : type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        onBlur={onBlur}
         placeholder={placeholder}
-        className={`w-full bg-[#111] rounded-2xl py-4 pl-12 pr-12 text-sm border transition-all
-          ${fieldErrors[field]
-            ? 'border-red-500/50 focus:border-red-500'
-            : value
-              ? 'border-green-500/50 focus:border-green-500'
-              : 'border-white/5 focus:border-blue-500'
-          } outline-none`}
+        className="w-full bg-[#111] rounded-2xl py-4 pl-12 pr-12 text-sm border border-white/5 focus:border-blue-500 outline-none transition-all"
       />
       {isPassword && (
         <button
@@ -254,9 +179,6 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
         >
           {showToggle ? <EyeOff size={18} /> : <Eye size={18} />}
         </button>
-      )}
-      {value && !fieldErrors[field] && (
-        <CheckCircle size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-green-500" />
       )}
     </div>
   );
@@ -282,7 +204,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
             </div>
             <div className="flex-1 text-left">
               <p className="font-bold text-lg">По номеру телефона</p>
-              <p className="text-sm text-zinc-500">Быстрый вход через SMS</p>
+              <p className="text-sm text-zinc-500">Быстрый вход</p>
             </div>
             <ArrowRight size={20} className="text-zinc-500 group-hover:translate-x-1 transition-transform" />
           </button>
@@ -351,7 +273,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
           <h2 className="text-3xl font-black mb-2" style={{ color: themeColor }}>
             Регистрация
           </h2>
-          <p className="text-zinc-500 text-sm mb-8">Заполните все поля для создания аккаунта</p>
+          <p className="text-zinc-500 text-sm mb-8">Заполните все поля</p>
 
           <div className="space-y-4">
             <InputField
@@ -359,45 +281,21 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
               placeholder="Имя и фамилия"
               value={formData.fullName}
               onChange={(val: string) => handleInputChange('fullName', val)}
-              onBlur={() => handleBlur('fullName')}
-              field="fullName"
             />
-            {fieldErrors.fullName && (
-              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                <AlertCircle size={12} />
-                {fieldErrors.fullName}
-              </p>
-            )}
 
             <InputField
               icon={Phone}
               placeholder="Номер телефона"
               value={formData.phone}
               onChange={(val: string) => handleInputChange('phone', val)}
-              onBlur={() => handleBlur('phone')}
-              field="phone"
             />
-            {fieldErrors.phone && (
-              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                <AlertCircle size={12} />
-                {fieldErrors.phone}
-              </p>
-            )}
 
             <InputField
               icon={AtSign}
-              placeholder="Никнейм (@username)"
+              placeholder="Никнейм"
               value={formData.nickname}
               onChange={(val: string) => handleInputChange('nickname', val)}
-              onBlur={() => handleBlur('nickname')}
-              field="nickname"
             />
-            {fieldErrors.nickname && (
-              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                <AlertCircle size={12} />
-                {fieldErrors.nickname}
-              </p>
-            )}
 
             <InputField
               icon={Mail}
@@ -405,78 +303,39 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
               type="email"
               value={formData.email || ''}
               onChange={(val: string) => handleInputChange('email', val)}
-              onBlur={() => handleBlur('email')}
-              field="email"
             />
-            {fieldErrors.email && (
-              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                <AlertCircle size={12} />
-                {fieldErrors.email}
-              </p>
-            )}
 
             <InputField
               icon={Lock}
               placeholder="Пароль"
               value={formData.password}
               onChange={(val: string) => handleInputChange('password', val)}
-              onBlur={() => handleBlur('password')}
-              field="password"
               isPassword
               showToggle={showPassword}
               onToggleShow={() => setShowPassword(!showPassword)}
             />
-            {fieldErrors.password && (
-              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                <AlertCircle size={12} />
-                {fieldErrors.password}
-              </p>
-            )}
 
             <InputField
               icon={Lock}
               placeholder="Повторите пароль"
               value={confirmPassword}
               onChange={setConfirmPassword}
-              onBlur={() => {
-                const errorMsg = formData.password !== confirmPassword ? 'Пароли не совпадают' : '';
-                setFieldErrors(prev => ({ ...prev, confirmPassword: errorMsg }));
-              }}
-              field="confirmPassword"
               isPassword
               showToggle={showConfirmPassword}
               onToggleShow={() => setShowConfirmPassword(!showConfirmPassword)}
             />
-            {fieldErrors.confirmPassword && (
-              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                <AlertCircle size={12} />
-                {fieldErrors.confirmPassword}
-              </p>
-            )}
           </div>
 
           {error && (
             <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4">
-              <p className="text-red-500 text-sm text-center flex items-center justify-center gap-2">
-                <AlertCircle size={16} />
-                {error}
-              </p>
-            </div>
-          )}
-
-          {success && (
-            <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-4">
-              <p className="text-green-500 text-sm text-center flex items-center justify-center gap-2">
-                <CheckCircle size={16} />
-                {success}
-              </p>
+              <p className="text-red-500 text-sm text-center">{error}</p>
             </div>
           )}
 
           <button
             onClick={handleRegister}
-            disabled={loading || Object.values(fieldErrors).some(msg => msg !== '')}
-            className="w-full py-4 rounded-2xl font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
+            disabled={loading}
+            className="w-full py-4 rounded-2xl font-bold transition-all disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98]"
             style={{ backgroundColor: themeColor }}
           >
             {loading ? (
@@ -515,61 +374,31 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
 
           <div className="space-y-4">
             {loginMethod === 'phone' && (
-              <>
-                <InputField
-                  icon={Phone}
-                  placeholder="Номер телефона"
-                  value={formData.phone}
-                  onChange={(val: string) => handleInputChange('phone', val)}
-                  onBlur={() => handleBlur('phone')}
-                  field="phone"
-                />
-                {fieldErrors.phone && (
-                  <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                    <AlertCircle size={12} />
-                    {fieldErrors.phone}
-                  </p>
-                )}
-              </>
+              <InputField
+                icon={Phone}
+                placeholder="Номер телефона"
+                value={formData.phone}
+                onChange={(val: string) => handleInputChange('phone', val)}
+              />
             )}
 
             {loginMethod === 'nickname' && (
-              <>
-                <InputField
-                  icon={AtSign}
-                  placeholder="Никнейм"
-                  value={formData.nickname}
-                  onChange={(val: string) => handleInputChange('nickname', val)}
-                  onBlur={() => handleBlur('nickname')}
-                  field="nickname"
-                />
-                {fieldErrors.nickname && (
-                  <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                    <AlertCircle size={12} />
-                    {fieldErrors.nickname}
-                  </p>
-                )}
-              </>
+              <InputField
+                icon={AtSign}
+                placeholder="Никнейм"
+                value={formData.nickname}
+                onChange={(val: string) => handleInputChange('nickname', val)}
+              />
             )}
 
             {loginMethod === 'email' && (
-              <>
-                <InputField
-                  icon={Mail}
-                  placeholder="Email"
-                  type="email"
-                  value={formData.email || ''}
-                  onChange={(val: string) => handleInputChange('email', val)}
-                  onBlur={() => handleBlur('email')}
-                  field="email"
-                />
-                {fieldErrors.email && (
-                  <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                    <AlertCircle size={12} />
-                    {fieldErrors.email}
-                  </p>
-                )}
-              </>
+              <InputField
+                icon={Mail}
+                placeholder="Email"
+                type="email"
+                value={formData.email || ''}
+                onChange={(val: string) => handleInputChange('email', val)}
+              />
             )}
 
             <InputField
@@ -577,42 +406,22 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
               placeholder="Пароль"
               value={formData.password}
               onChange={(val: string) => handleInputChange('password', val)}
-              onBlur={() => handleBlur('password')}
-              field="password"
               isPassword
               showToggle={showPassword}
               onToggleShow={() => setShowPassword(!showPassword)}
             />
-            {fieldErrors.password && (
-              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
-                <AlertCircle size={12} />
-                {fieldErrors.password}
-              </p>
-            )}
           </div>
 
           {error && (
             <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4">
-              <p className="text-red-500 text-sm text-center flex items-center justify-center gap-2">
-                <AlertCircle size={16} />
-                {error}
-              </p>
-            </div>
-          )}
-
-          {success && (
-            <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-4">
-              <p className="text-green-500 text-sm text-center flex items-center justify-center gap-2">
-                <CheckCircle size={16} />
-                {success}
-              </p>
+              <p className="text-red-500 text-sm text-center">{error}</p>
             </div>
           )}
 
           <button
             onClick={handleLogin}
-            disabled={loading || Object.values(fieldErrors).some(msg => msg !== '')}
-            className="w-full py-4 rounded-2xl font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
+            disabled={loading}
+            className="w-full py-4 rounded-2xl font-bold transition-all disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98]"
             style={{ backgroundColor: themeColor }}
           >
             {loading ? (
@@ -623,19 +432,12 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
             ) : 'Войти'}
           </button>
 
-          <div className="text-center space-y-2">
+          <div className="text-center">
             <button
               onClick={() => setMode('register')}
               className="text-sm text-zinc-500 hover:text-white transition-colors"
             >
               Нет аккаунта? Зарегистрироваться
-            </button>
-
-            <button
-              onClick={() => {/* Добавить восстановление пароля */ }}
-              className="text-xs text-zinc-600 hover:text-zinc-500 transition-colors block w-full"
-            >
-              Забыли пароль?
             </button>
           </div>
         </div>
