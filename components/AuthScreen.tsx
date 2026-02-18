@@ -67,16 +67,20 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
     }
   };
 
-  // Обработчик изменений полей (НОВЫЙ)
+  // Обработчик изменений полей (УПРОЩЕННЫЙ - БЕЗ ВАЛИДАЦИИ)
   const handleInputChange = (field: keyof UserData, value: string) => {
-    // Сначала обновляем значение
+    // Только обновляем значение, без валидации
     setFormData(prev => ({ ...prev, [field]: value }));
 
-    // Запускаем валидацию с задержкой
-    debouncedValidate(field, value);
-
-    // Сбрасываем общую ошибку
+    // Сбрасываем только общую ошибку, но не ошибки полей
     setError('');
+  };
+
+  // Валидация при потере фокуса
+  const handleBlur = (field: keyof UserData) => {
+    const value = formData[field as string] || '';
+    const errorMsg = validateField(field, value);
+    setFieldErrors(prev => ({ ...prev, [field]: errorMsg }));
   };
 
   // Валидация всей формы регистрации
@@ -245,6 +249,7 @@ export default function AuthScreen({ onAuthSuccess, themeColor }: AuthScreenProp
     placeholder,
     value,
     onChange,
+    onBlur,
     field,
     showToggle,
     onToggleShow,
